@@ -25,7 +25,7 @@ def get_today_schedule(now_pacific):
 
     # Guild Hunt (9:00 AM - 11:00 PM PDT/PST)
     if weekday in HUNT_DAYS:
-        hunt_start = now_pacific.replace(hour=11, minute=25, second=0, microsecond=0)
+        hunt_start = now_pacific.replace(hour=11, minute=29, second=0, microsecond=0)
         hunt_end = now_pacific.replace(hour=23, minute=0, second=0, microsecond=0)
 
         if now_pacific < hunt_end:
