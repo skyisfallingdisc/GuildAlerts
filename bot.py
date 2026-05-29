@@ -25,7 +25,7 @@ def get_today_schedule(now_pacific):
 
     # Guild Hunt (9:00 AM - 11:00 PM PDT/PST)
     if weekday in HUNT_DAYS:
-        hunt_start = now_pacific.replace(hour=11, minute=29, second=0, microsecond=0)
+        hunt_start = now_pacific.replace(hour=9, minute=0, second=0, microsecond=0)
         hunt_end = now_pacific.replace(hour=23, minute=0, second=0, microsecond=0)
 
         if now_pacific < hunt_end:
@@ -33,7 +33,7 @@ def get_today_schedule(now_pacific):
 
     # Guild Dance (10:30 AM - 10:30 PM PDT/PST)
     if weekday in DANCE_DAYS:
-        dance_start = now_pacific.replace(hour=11, minute=27, second=0, microsecond=0)
+        dance_start = now_pacific.replace(hour=10, minute=30, second=0, microsecond=0)
         dance_end = now_pacific.replace(hour=22, minute=30, second=0, microsecond=0)
 
         if now_pacific < dance_end:
