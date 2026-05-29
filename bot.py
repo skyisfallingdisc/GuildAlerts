@@ -2,7 +2,8 @@ import discord
 import asyncio
 import os
 from dotenv import load_dotenv
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo  # Handles standard/daylight savings time automatically
 from keep_alive import keep_alive
 
 load_dotenv()
@@ -18,30 +19,27 @@ PING_ROLE_ID = 1507799489312985238
 HUNT_DAYS = [4, 5, 6]   # Fri/Sat/Sun
 DANCE_DAYS = [4]        # Friday only
 
-def get_today_schedule(now_utc):
-    weekday = now_utc.weekday()
+def get_today_schedule(now_pacific):
+    weekday = now_pacific.weekday()
     events = []
 
-    # Guild Hunt (9 AM PDT ≈ 16 UTC)
+    # Guild Hunt (9:00 AM - 11:00 PM PDT/PST)
     if weekday in HUNT_DAYS:
-        hunt_start = now_utc.replace(hour=16, minute=0, second=0, microsecond=0)
-        # Ends at 6:00 UTC the NEXT day
-        hunt_end = now_utc.replace(hour=6, minute=0, second=0, microsecond=0) + timedelta(days=1)
+        hunt_start = now_pacific.replace(hour=11, minute=25, second=0, microsecond=0)
+        hunt_end = now_pacific.replace(hour=23, minute=0, second=0, microsecond=0)
 
-        # CRITICAL FIX: Check if it's before the END time, not the start time
-        if now_utc < hunt_end:
+        if now_pacific < hunt_end:
             events.append(("hunt", hunt_start, hunt_end))
 
-    # Guild Dance (10:30 AM PDT ≈ 17:30 UTC)
+    # Guild Dance (10:30 AM - 10:30 PM PDT/PST)
     if weekday in DANCE_DAYS:
-        dance_start = now_utc.replace(hour=17, minute=30, second=0, microsecond=0)
-        # Ends at 5:30 UTC the NEXT day
-        dance_end = now_utc.replace(hour=5, minute=30, second=0, microsecond=0) + timedelta(days=1)
+        dance_start = now_pacific.replace(hour=11, minute=27, second=0, microsecond=0)
+        dance_end = now_pacific.replace(hour=22, minute=30, second=0, microsecond=0)
 
-        if now_utc < dance_end:
+        if now_pacific < dance_end:
             events.append(("dance", dance_start, dance_end))
 
-    return min(events, key=lambda x: x[1], default=None)
+    return events 
 
 async def scheduler():
     await client.wait_until_ready()
@@ -51,23 +49,23 @@ async def scheduler():
         channel = await client.fetch_channel(GUILD_CHANNEL_ID)
 
     role_mention = f"<@&{PING_ROLE_ID}>"
-    last_fired = None
+    
+    # Use a set to track multiple fired events uniquely
+    last_fired = set() 
 
     while not client.is_closed():
-        now = datetime.now(timezone.utc)
-        event = get_today_schedule(now)
+        # Track everything using Pacific Time to avoid UTC day-rollover issues
+        now_pacific = datetime.now(ZoneInfo("America/Los_Angeles"))
+        events = get_today_schedule(now_pacific)
 
-        if event:
-            event_type, start_time, end_time = event
-
-            # Prevent spamming the channel once it fires
-            if last_fired == start_time:
-                await asyncio.sleep(60)
+        for event_type, start_time, end_time in events:
+            # If this specific instance of the event has already fired, skip it
+            if (event_type, start_time) in last_fired:
                 continue
 
             # Check if it's time to fire
-            if now >= start_time:
-                last_fired = start_time
+            if now_pacific >= start_time:
+                last_fired.add((event_type, start_time))
 
                 if event_type == "hunt":
                     await channel.send(
@@ -80,6 +78,9 @@ async def scheduler():
                         f"{role_mention} 💃 **Guild Dance is live!**\n"
                         f"Ends in: <t:{int(end_time.timestamp())}:R>"
                     )
+
+        # Housekeeping: Clean up the last_fired set so it doesn't grow infinitely
+        last_fired = {item for item in last_fired if now_pacific - item[1] < timedelta(days=1)}
 
         # Check every minute
         await asyncio.sleep(60)
