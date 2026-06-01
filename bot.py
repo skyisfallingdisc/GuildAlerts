@@ -75,7 +75,7 @@ async def scheduler():
     if channel is None:
         channel = await client.fetch_channel(GUILD_CHANNEL_ID)
 
-    role_mention = f"<@&{PING_ROLE_ID}> <@&{PING_ROLE_ID_2}>"
+    role_mention = f"<@&{PING_ROLE_ID}> <@&{PING_ROLE_ID_2}> \n"
     
     last_fired = set() 
 
