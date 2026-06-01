@@ -16,6 +16,7 @@ client = discord.Client(intents=intents)
 
 GUILD_CHANNEL_ID = 1507797912111939755
 PING_ROLE_ID = 1507799489312985238
+PING_ROLE_ID_2 = 1511085696121700533
 
 HUNT_DAYS = [4, 5, 6]   # Fri/Sat/Sun
 DANCE_DAYS = [4]        # Friday only
@@ -74,7 +75,8 @@ async def scheduler():
     if channel is None:
         channel = await client.fetch_channel(GUILD_CHANNEL_ID)
 
-    role_mention = f"<@&{PING_ROLE_ID}>"
+    role_mention = f"<@&{PING_ROLE_ID}> <@&{PING_ROLE_ID_2}>"
+    
     last_fired = set() 
 
     # --- RENDER RESTART PROTECTION ---
