@@ -16,10 +16,12 @@ client = discord.Client(intents=intents)
 
 GUILD_CHANNEL_ID = 1507797912111939755
 PING_ROLE_ID = 1507799489312985238
-PING_ROLE_ID_2 = 1511085696121700533
 
 HUNT_DAYS = [4, 5, 6]   # Fri/Sat/Sun
 DANCE_DAYS = [4]        # Friday only
+
+# TRACKER FLAG: Prevents duplicate loops on reconnects
+scheduler_started = False
 
 def get_today_schedule(now_pacific):
     weekday = now_pacific.weekday()  # 0=Mon, 1=Tue, ..., 3=Thu, 4=Fri, 5=Sat, 6=Sun
@@ -62,7 +64,7 @@ def get_today_schedule(now_pacific):
 
     # 7. Stimens (Every 2 weeks Sunday night 12:00 AM ≈ Monday 00:00 AM)
     if weekday == 0:
-        if now_pacific.isocalendar()[1] % 2 == 1:
+        if now_pacific.isocalendar()[1] % 2 == 0:
             stimens_start = now_pacific.replace(hour=0, minute=0, second=0, microsecond=0)
             events.append(("stimens", stimens_start, None))
 
@@ -75,8 +77,7 @@ async def scheduler():
     if channel is None:
         channel = await client.fetch_channel(GUILD_CHANNEL_ID)
 
-    role_mention = f"<@&{PING_ROLE_ID}> <@&{PING_ROLE_ID_2}> \n"
-    
+    role_mention = f"<@&{PING_ROLE_ID}>"
     last_fired = set() 
 
     # --- RENDER RESTART PROTECTION ---
@@ -115,7 +116,7 @@ async def scheduler():
             if (event_type, today_str) in last_fired:
                 continue
 
-            if now_pacific >= start_time:
+            if start_time <= now_pacific <= (start_time + timedelta(minutes=30)):
                 last_fired.add((event_type, today_str))
 
                 if event_type == "hunt":
@@ -141,8 +142,16 @@ async def scheduler():
 
 @client.event
 async def on_ready():
+    global scheduler_started
     print(f"Logged in as {client.user} (PRODUCTION MODE)")
-    client.loop.create_task(scheduler())
+    
+    # Only create the loop task if it hasn't been started yet
+    if not scheduler_started:
+        scheduler_started = True
+        client.loop.create_task(scheduler())
+        print("Scheduler loop successfully initialized.")
+    else:
+        print("Bot reconnected. Extraneous scheduler invocation suppressed.")
 
 keep_alive()
 client.run(TOKEN)
